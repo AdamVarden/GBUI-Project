@@ -1,76 +1,91 @@
 from time import ctime
 import time
-from numpy.lib.function_base import place
 import speech_recognition as sr
 import webbrowser
 import playsound
-import os
 import random
 import numpy as np
 from gtts import gTTS
 import face_recognition
-import os
-import cv2
 from face_recognition.api import face_encodings
+import os
+import subprocess
+import cv2
 import requests
 from datetime import datetime
 import tkinter as tkinter
 from threading import Thread
-import subprocess
+import sys
 
 greetingCommands = np.loadtxt(fname='./Commands/GreetingsCommands.txt',delimiter=',',dtype=np.str)
 exitCommands = np.loadtxt(fname='./Commands/ExitCommands.txt',delimiter=',',dtype=np.str)
 
-r = sr.Recognizer() 
+# Setting up voice recognizer
+r = sr.Recognizer()
+# Directory Paths 
 FACE_DIR = "./Faces/"
 ADMIN_DIR = './Admin/'
+# Face recognition variables
 TOLERANCE = 0.6
 FRAME_THICKNESS = 3
 FONT_THICKNESS = 2
 MODEL = "cnn"
 
+# Storing faces and names
 known_faces = []
 known_names = []
 
+# For face recognition
 def face_auth():
     global match, date_time
     now = datetime.now() # current date and time
     date_time = now.strftime("%d-%m-%Y-%H-%M-%S")
     
+    # Loading images from the faces directory and sub folders
     for name in os.listdir(FACE_DIR):
-        
+        # Identifying faces within the images and storinf them in the known faces list
         for filename in os.listdir(f"{FACE_DIR}{name}"):
             image = face_recognition.load_image_file(f"{FACE_DIR}/{name}/{filename}")
             encoding = face_recognition.face_encodings(image)[0]
             known_faces.append(encoding)
             known_names.append(name)
-            
+    
+    # Taking a picture using the webcam of the user
     madison_speak("Capturing Face....")
     cap = cv2.VideoCapture(0)
     ret, frame, = cap.read()
+    # Storing image in the admin folder with its name as the date and time it was taken
     cv2.imwrite("./Admin/"+date_time+".png", frame)
     cv2.destroyAllWindows()
     cap.release()
 
+    # Identifying a face within the captured image
     madison_speak("Scanning.....")
+    # Loading the captured image
     input = face_recognition.load_image_file("./Admin/"+date_time+".png")
     locations = face_recognition.face_locations(input,model=MODEL)
     encodings = face_encodings(input,locations)
     image = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
 
+    # Comparing all images in the known faces list to the captured image from the webcam
     madison_speak("Looking for Matches.....")
     for face_encoding, face_location in zip(encodings,locations):
         result = face_recognition.compare_faces(known_faces,face_encoding, TOLERANCE)
         match = None
+        
+        # When there is a match found the user is given access to the assistant 
         if True in result:
             match = known_names[result.index(True)]
             print(f"Match Found: {match}")
             madison_speak(f"Access Granted, Welcome {match}")
+            # Recording of users that have used the application
             with open("./Admin/logs.txt", "a") as myfile:
                 myfile.write("- " + match+": "+ctime()+"\n")   
             return True
         
+        # When there is no match found
         else:
+            # Record of the failed attempt
             with open("./Admin/logs.txt", "a") as myfile:
                 myfile.write("- Failed Attempt: "+date_time+"\n")  
             madison_speak("Access Denied")
@@ -79,11 +94,17 @@ def face_auth():
 # listen for audio and convert it to text:
 def record_audio(ask=False):
     with sr.Microphone() as source: 
+        # Used for follow up questions
         if ask:
             madison_speak(ask)
         print("Listening......")
         r.pause_threshold = 1
-        audio = r.record(source, duration=3)  # listen for the audio via source
+        audio = r.record(source, duration=3)
+        # The listen function stopped working for me unexpectedly but could work on another machine 
+        # If so uncomment the listen and comment out the record method above
+        #audio = r.listen(source)
+    
+    # Attempts to recognize the inputted voice
     try: 
         print("Recognizing...")     
         query = r.recognize_google(audio, language ='en-in') 
@@ -100,16 +121,21 @@ def record_audio(ask=False):
 
     return query 
 
+# For getting the application to speak
 def madison_speak(audio_string):
+    # Converting the text to speech
     textToSpeach = gTTS(text=audio_string,lang='en')
+    # Adding what the application is saying to the UI
     msg_list.insert(tkinter.END,audio_string)
+    # Giving a random name and number to the created audio file
     r= random.randint(1,10000)
     audio_file = 'audioNO-' +str(r) + '.mp3'
+    # Saving, playing then removing
     textToSpeach.save(audio_file)
     playsound.playsound(audio_file)
-    #print(audio_string)
     os.remove(audio_file)
 
+# This takes what the record_audio method returns
 def respond(voice_data):
     # Asking the assistant
     if voice_data in greetingCommands:
@@ -144,54 +170,68 @@ def respond(voice_data):
         with open("notes.txt", "a") as myfile:
             myfile.write("- " + note+"\n")    
         madison_speak(f'{note} has been noted')        
-
+    # Giving help
     if "help" in voice_data:
-        madison_speak(f'{note} has been noted')
-                
+        madison_speak("Here is a list of my keywords ")
+        madison_speak("Search, Weather, Open, Note, weather, time")
+        madison_speak("There will be follow up questions for specification")
+
+    # For opening the notes and logs text
     if "open" in voice_data.split():
-        open = record_audio("What would you like me to open?")
+        open = record_audio("What would you like me to open? Logs, Notes or Admin?")
         
         if "logs" in open.split():
+            madison_speak("Opening logs")
             subprocess.call(['notepad.exe', './Admin/logs.txt'])
             
         if "notes" in open.split():
+            madison_speak("Opening notes")
             subprocess.call(['notepad.exe', './notes.txt'])
             
         if "admin" in open.split():
+            madison_speak("Opening Admin Folder")
             subprocess.Popen(r'explorer /select,"C:\Users\Adam Varden\Documents\Year 4 Notes\Semester 2\Gesture Based UI\Final Project\Admin"')       
             
     if voice_data in exitCommands:
-        exit()
+        madison_speak("Shutting Down....")
+        sys.exit()
 
-def begin():
+def start(active = True):
+    
     if face_auth() == True:
         time.sleep(1)
         madison_speak(f"How may I help you today, {match}?")
-        while 1:
+        while active:
             voice_data = record_audio()
             respond(voice_data) 
-            
+
+    
+# Starting up the UI            
 def UI():
     global msg_list
+    # Using tkinter to create a user interface
+    # This creates a window with a message list of what the assistant says
     root = tkinter.Tk()
     root.title("Madsion")
     messages_frame = tkinter.Frame(root)
     scrollbar = tkinter.Scrollbar(messages_frame)
-
     msg_list = tkinter.Listbox(messages_frame,height=20, width=50, yscrollcommand=scrollbar.set)
-
-
     scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
     msg_list.pack(side=tkinter.LEFT, fill=tkinter.BOTH)
     msg_list.pack()
     messages_frame.pack()
+    
+    activate_button = tkinter.Button(root, text="Start", command=start)
+    activate_button.pack()
+    
     tkinter.mainloop()
 
-
+# First method to be called 
 if __name__ == "__main__":
-    global GUI_THREAD,APP_THREAD
-    
+    global APP_THREAD
+    # Threads for the application and the user interface
     GUI_THREAD = Thread(target=UI)
-    APP_THREAD = Thread(target=begin)
-    APP_THREAD.start()
     GUI_THREAD.start()
+    APP_THREAD = Thread(target=start)
+    APP_THREAD.start()
+    
