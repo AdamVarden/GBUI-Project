@@ -100,6 +100,7 @@ def record_audio(ask=False):
         print("Listening......")
         r.pause_threshold = 1
         audio = r.record(source, duration=3)
+        
         # The listen function stopped working for me unexpectedly but could work on another machine 
         # If so uncomment the listen and comment out the record method above
         #audio = r.listen(source)
@@ -167,33 +168,36 @@ def respond(voice_data):
     # For making notes
     if "note" in voice_data.split():
         note = record_audio("What should i note?")
-        with open("notes.txt", "a") as myfile:
+        
+        with open("./notes.txt", "a") as myfile:
             myfile.write("- " + note+"\n")    
         madison_speak(f'{note} has been noted')        
+
     # Giving help
     if "help" in voice_data:
         madison_speak("Here is a list of my keywords ")
-        madison_speak("Search, Weather, Open, Note, weather, time")
+        madison_speak("Search, Weather, Open, Time, Note, Help")
         madison_speak("There will be follow up questions for specification")
 
     # For opening the notes and logs text
     if "open" in voice_data.split():
-        open = record_audio("What would you like me to open? Logs, Notes or Admin?")
+        file = record_audio("What would you like me to open? Logs, Notes or Admin?")
         
-        if "logs" in open.split():
+        if "logs" in file.split():
             madison_speak("Opening logs")
             subprocess.call(['notepad.exe', './Admin/logs.txt'])
             
-        if "notes" in open.split():
+        if "notes" in file.split():
             madison_speak("Opening notes")
             subprocess.call(['notepad.exe', './notes.txt'])
             
-        if "admin" in open.split():
+        if "admin" in file.split():
             madison_speak("Opening Admin Folder")
             subprocess.Popen(r'explorer /select,"C:\Users\Adam Varden\Documents\Year 4 Notes\Semester 2\Gesture Based UI\Final Project\Admin"')       
             
     if voice_data in exitCommands:
         madison_speak("Shutting Down....")
+        madison_speak("Please Close the Window....")
         sys.exit()
 
 def start(active = True):
@@ -212,7 +216,7 @@ def UI():
     # Using tkinter to create a user interface
     # This creates a window with a message list of what the assistant says
     root = tkinter.Tk()
-    root.title("Madsion")
+    root.title("Madison")
     messages_frame = tkinter.Frame(root)
     scrollbar = tkinter.Scrollbar(messages_frame)
     msg_list = tkinter.Listbox(messages_frame,height=20, width=50, yscrollcommand=scrollbar.set)
@@ -220,9 +224,7 @@ def UI():
     msg_list.pack(side=tkinter.LEFT, fill=tkinter.BOTH)
     msg_list.pack()
     messages_frame.pack()
-    
-    activate_button = tkinter.Button(root, text="Start", command=start)
-    activate_button.pack()
+
     
     tkinter.mainloop()
 

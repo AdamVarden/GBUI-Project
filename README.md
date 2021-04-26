@@ -29,8 +29,11 @@ Follow instructions on the first answer of this stackoverflow
 
 [Youtube video for dlib solution](https://www.youtube.com/watch?v=jjRFCTmK2SY&ab_channel=Ritesh)
 
-### Dlib
 Download the wahl file based what version of python you have and if its x64 or x32 bit
+
+I used python 3.8 x64 bit
+
+### Dlib
 
 [Link to download dlib](https://github.com/RvTechiNNovate/face_recog_dlib_file)
 
@@ -47,3 +50,11 @@ Download the wahl file based what version of python you have and if its x64 or x
 
 ## Issue
 When working on this project the listen method included in the speach recognition suddenly stopped working so I commented out the listen method and replaced it with the record method which records and analyzes every few seconds.
+
+# References 
+## Face Recognition
+https://www.youtube.com/watch?v=535acCxjHCI
+
+
+## Voice Recognition
+https://www.youtube.com/watch?v=sHeJgKBaiAI&ab_channel=edureka%21
